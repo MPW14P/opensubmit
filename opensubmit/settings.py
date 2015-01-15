@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import os
 from ConfigParser import SafeConfigParser
+from novaclient.v1_1 import client
 
 
 # The following section determines which configuration file to load.
@@ -202,6 +203,12 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 
 JOB_EXECUTOR_SECRET = config.get("executor", "SHARED_SECRET")
 assert(JOB_EXECUTOR_SECRET is not "")
+
+NOVA_AUTH_URL = config.get("nova", "AUTH_URL")
+KEYSTONE_USER = config.get("nova", "KEYSTONE_USER")
+KEYSTONE_TENANT = config.get("nova", "KEYSTONE_TENANT")
+KEYSTONE_PASS = config.get("nova", "KEYSTONE_PASS")
+NOVA = client.Client(KEYSTONE_USER, KEYSTONE_PASS, KEYSTONE_TENANT, NOVA_AUTH_URL, service_type="compute")
 
 GRAPPELLI_ADMIN_TITLE = "OpenSubmit"
 GRAPPELLI_SWITCH_USER = True

@@ -105,6 +105,9 @@ class Assignment(models.Model):
     validity_script_download = models.BooleanField(default=False, verbose_name='Download of validation script ?', help_text='If activated, the students can download the validation script for offline analysis.')
     attachment_test_full = models.FileField(upload_to="testscripts", blank=True, null=True, verbose_name='Full test script', help_text='Same as the validation script, but executed AFTER the hard deadline to determine final grading criterias for the submission. Results are not shown to students.')
     test_machines = models.ManyToManyField(TestMachine, blank=True, null=True, related_name="assignments", help_text="The test machines that will take care of submissions for this assignment.")
+    nova_flavor = models.CharField(max_length=38, blank=True, null=True, default=None)
+    nova_image = models.CharField(max_length=38, blank=True, null=True, default=None)
+    nova_network = models.CharField(max_length=38, blank=True, null=True, default=None)
 
     def has_validity_test(self):
         return str(self.attachment_test_validity).strip() != ""
@@ -169,6 +172,16 @@ class Assignment(models.Model):
 
         return True
 
+    @property
+    def has_vm_support(self):
+        return self.nova_image and self.nova_network and self.nova_flavor
+    
+
+class VMInstance(models.Model):
+    uuid = models.CharField(max_length=38, help_text="Instance UUID")
+    owner = models.ForeignKey(User, related_name='vms')
+    assignment = models.ForeignKey(Assignment)
+    token = models.CharField(max_length=38)
 
 # monkey patch for getting better user name stringification
 # User proxies did not make the job

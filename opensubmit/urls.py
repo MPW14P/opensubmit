@@ -24,6 +24,13 @@ urlpatterns = patterns('',
     url(r'^machines/secret=(?P<secret>\w+)$', 'opensubmit.api.machines', name='machines'),
     url(r'^settings/$', 'opensubmit.views.settings', name='settings'),
     url(r'^courses/$', 'opensubmit.views.courses', name='courses'),
+    url(r'^vm/(?P<ass_id>\d+)/new$', 'opensubmit.views.new_vm', name='new_vm'),
+    url(r'^vm/(?P<ass_id>\d+)/view$', 'opensubmit.views.view_vm', name='view_vm'),
+    url(r'^vm/(?P<ass_id>\d+)/kill$', 'opensubmit.views.kill_vm', name='kill_vm'),
+    url(r'^vm/(?P<ass_id>\d+)/url$', 'opensubmit.views.vnc_vm', name='vnc_vm'),
+    url(r'^vm/(?P<token>[0-9a-fA-F\-]+)/script$', 'opensubmit.views.script_vm', name='script_vm'),
+    url(r'^vm/submit$', 'opensubmit.views.submit_vm', name='submit_vm'),
+    
 
     url(r'^api/', include('executor_api.urls', namespace="api")),
     url(r'^grappelli/', include('grappelli.urls')), # grappelli URLS    

@@ -7,30 +7,36 @@ import tarfile
 import tempfile
 import urllib
 import zipfile
+import inflection
+import uuid
 
 from datetime import timedelta, datetime
 
 from django.contrib import auth, messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
 from django.core.mail import mail_managers, send_mail
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.encoding import smart_text
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
 from django.forms.models import modelform_factory
+from django.views.decorators.csrf import csrf_exempt
 
 from openid2rp.django.auth import linkOpenID, preAuthenticate, AX, getOpenIDs
 
 from forms import SettingsForm, getSubmissionForm, SubmissionFileUpdateForm
-from models import user_courses, SubmissionFile, Submission, Assignment, TestMachine, Course, UserProfile, db_fixes
+from models import user_courses, SubmissionFile, Submission, Assignment, TestMachine, Course, UserProfile, db_fixes, VMInstance
 from models import inform_student, inform_course_owner, open_assignments
-from settings import JOB_EXECUTOR_SECRET, MAIN_URL, LOGIN_DESCRIPTION, OPENID_PROVIDER
+from settings import JOB_EXECUTOR_SECRET, MAIN_URL, LOGIN_DESCRIPTION, OPENID_PROVIDER, NOVA, DEBUG
+
+from novaclient import exceptions as nova_exceptions
 
 
 def index(request):
@@ -103,6 +109,110 @@ def details(request, subm_id):
         'submission': subm}
     )
 
+@login_required
+def new_vm(request, ass_id):
+    ass = get_object_or_404(Assignment, pk=ass_id)
+    
+    if not ass.is_visible(user=request.user):
+        raise Http404()
+    
+    # Check whether submissions are allowed.
+    if not ass.can_create_submission(user=request.user):
+        raise PermissionDenied("You are not allowed to create a submission for this assignment")
+    
+    if not ass.has_vm_support: #ass.nova_flavor or not ass.nova_image or not ass.nova_network:
+        raise PermissionDenied("You have no VM power here.")
+    
+    if not VMInstance.objects.filter(owner=request.user, assignment=ass).count():
+        vmname = inflection.parameterize(u'{ass.course.title}-{ass.title}-{user}'.format(ass=ass, user=request.user.username))
+        token = uuid.uuid4()
+        server = NOVA.servers.create(
+            vmname,
+            NOVA.images.get(ass.nova_image),
+            NOVA.flavors.get(ass.nova_flavor),
+            files={'/etc/assignmentinfo': 'Yo.'},
+            nics=[{'net-id': ass.nova_network}],
+            admin_pass='toor',
+            meta={'yolo':'swag'},
+            userdata=render_to_string('vm_userdata.sh', {'script_url': request.build_absolute_uri(reverse('script_vm', kwargs={'token':token}))}),
+            key_name='root-at-mpw14p-10'
+            )
+        vm = VMInstance(uuid=server.id, owner=request.user, assignment=ass, token=token)
+        vm.save()
+    
+    return redirect('view_vm', ass_id=ass_id)
+
+def script_vm(request, token):
+    vm = get_object_or_404(VMInstance, token=token)
+    return HttpResponse(render_to_string('vm_submit.sh', {'vm': vm, 'submit_url': request.build_absolute_uri(reverse('submit_vm')) }), content_type="text/plain")
+
+@csrf_exempt
+def submit_vm(request):
+    if not request.POST:
+        raise PermissionDenied("Missing POST")
+    
+    vm = get_object_or_404(VMInstance, token=request.POST['token'])
+    
+    submissionFile = SubmissionFile(attachment=request.FILES['submission'])
+    submission = Submission(submitter=vm.owner, assignment=vm.assignment)
+    
+    submissionFile.save()
+    submission.state = submission.get_initial_state()
+    submission.file_upload = submissionFile
+    submission.save()
+    
+    submission.authors.add(vm.owner)  # something about m2m
+    submission.save()
+    
+    if submission.state == Submission.SUBMITTED:
+        inform_course_owner(request, submission)
+    return HttpResponse('Successfully uploaded submission {}'.format(submission.pk))
+
+@login_required
+def kill_vm(request, ass_id):
+    ass = get_object_or_404(Assignment, pk=ass_id)
+    vm = get_object_or_404(VMInstance, assignment=ass, owner=request.user)
+
+    try:    
+        NOVA.servers.delete(vm.uuid)
+    except nova_exceptions.NotFound:
+        pass
+    except nova_exceptions.ClientException as e: 
+        if not DEBUG:
+            raise ValidationError("Failed to delete VM: {}".format(repr(e)))
+        else:
+            raise
+    except Exception as e:
+        raise Exception("Failed to delete VM: {} {}".format(repr(e), type(e)))
+    vm.delete()
+    return redirect('dashboard')
+
+@login_required
+def vnc_vm(request, ass_id):
+    ass = get_object_or_404(Assignment, pk=ass_id)
+    
+    if not ass.is_visible(user=request.user):
+        raise Http404()
+    
+    vm = get_object_or_404(VMInstance, owner=request.user, assignment=ass)
+    server = NOVA.servers.get(vm.uuid)
+    try:
+        vnc_url = server.get_vnc_console('novnc')['console']['url']
+        return HttpResponse(vnc_url)
+    except nova_exceptions.Conflict:
+        pass
+    return HttpResponse('')
+
+@login_required
+def view_vm(request, ass_id):
+    ass = get_object_or_404(Assignment, pk=ass_id)
+    
+    if not ass.is_visible(user=request.user):
+        raise Http404()
+    
+    return render(request, 'vnc.html', {
+        'assignment': ass
+    })
 
 @login_required
 def new(request, ass_id):

@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
-from opensubmit.models import Course, Grading, GradingScheme, Assignment, SubmissionFile, Submission, TestMachine
+from opensubmit.models import Course, Grading, GradingScheme, Assignment, SubmissionFile, Submission, TestMachine, VMInstance
 from django.contrib.admin.sites import AdminSite
+from django.contrib.admin import ModelAdmin
 
 from user import UserAdmin
 from course import CourseAdmin
