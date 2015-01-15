@@ -13,6 +13,8 @@ from django.core.urlresolvers import reverse
 from settings import MAIN_URL, MEDIA_URL, MEDIA_ROOT
 from itertools import chain
 
+from opensubmit.fields import JsonListField
+
 
 logger = logging.getLogger('OpenSubmit')
 
@@ -108,6 +110,7 @@ class Assignment(models.Model):
     nova_flavor = models.CharField(max_length=38, blank=True, null=True, default=None)
     nova_image = models.CharField(max_length=38, blank=True, null=True, default=None)
     nova_network = models.CharField(max_length=38, blank=True, null=True, default=None)
+    nova_security_groups = JsonListField()
 
     def has_validity_test(self):
         return str(self.attachment_test_validity).strip() != ""
@@ -652,4 +655,10 @@ def open_assignments(user):
     qs = qs.filter(course__in=user_courses(user))
     qs = qs.order_by('soft_deadline').order_by('hard_deadline').order_by('title')
     waiting_for_action = [subm.assignment for subm in user.authored.all().exclude(state=Submission.WITHDRAWN)]
-    return [ass for ass in qs if ass not in waiting_for_action]
+    asses = [ass for ass in qs]
+    for ass in asses:
+        ass.has_vm = VMInstance.objects.filter(owner=user, assignment=ass).count()
+        ass.has_submission = user.authored.filter(assignment=ass).exclude(state=Submission.WITHDRAWN).count() > 0
+        ass.last_user_submission = user.authored.filter(assignment=ass).last()
+    asses = [ass for ass in asses if ass not in waiting_for_action or ass.has_vm_support]
+    return asses

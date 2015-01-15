@@ -32,3 +32,5 @@ teacher_backend.register(SubmissionFile, SubmissionFileAdmin)
 teacher_backend.register(Submission, SubmissionAdmin)
 teacher_backend.register(Course, CourseAdmin)
 teacher_backend.register(TestMachine)
+teacher_backend.register(VMInstance, ModelAdmin)
+

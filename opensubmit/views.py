@@ -130,12 +130,13 @@ def new_vm(request, ass_id):
             vmname,
             NOVA.images.get(ass.nova_image),
             NOVA.flavors.get(ass.nova_flavor),
+            security_groups=ass.nova_security_groups,
             files={'/etc/assignmentinfo': 'Yo.'},
             nics=[{'net-id': ass.nova_network}],
             admin_pass='toor',
             meta={'yolo':'swag'},
             userdata=render_to_string('vm_userdata.sh', {'script_url': request.build_absolute_uri(reverse('script_vm', kwargs={'token':token}))}),
-            key_name='root-at-mpw14p-10'
+            key_name='root-at-mpw14p-10',
             )
         vm = VMInstance(uuid=server.id, owner=request.user, assignment=ass, token=token)
         vm.save()
