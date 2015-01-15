@@ -40,8 +40,25 @@
 			</td>
                         <td>{{ assignment.publish_at }}</td>
                         <td>{% if assignment.soft_deadline %}{{ assignment.soft_deadline }}{%else %}{{ assignment.hard_deadline }}{% endif %}</td>
-                        <td>{% if assignment.soft_deadline %}{{ assignment.soft_deadline|timeuntil }}{%else %}{{ assignment.hard_deadline|timeuntil }}{% endif %}</td>
-                        <td><a href="{% url 'new' assignment.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-plus"></span> New Submission</a></td>
+                        <td>
+                            {% if assignment.soft_deadline %}{{ assignment.soft_deadline|timeuntil }}{%else %}{{ assignment.hard_deadline|timeuntil }}{% endif %}
+{% if assignment.has_submission %}
+                            <br />
+                            <a href="#" class="{{ assignment.last_user_submission|state_label_css }}">{{ assignment.last_user_submission.state_for_students }}</a>
+{% endif %}
+                        </td>
+                        <td>
+{% if assignment.has_vm_support %}
+{% if assignment.has_vm %}
+                            <a href="{% url 'view_vm' assignment.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-picture"></span> View VM</a>
+                            <a href="{% url 'kill_vm' assignment.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-trash"></span> Kill VM</a>
+{% else %}
+                            <a href="{% url 'new_vm' assignment.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-cloud"></span> New VM</a>
+{% endif %}
+{% else %}
+                            <a href="{% url 'new' assignment.pk %}" class="btn btn-default"><span class="glyphicon glyphicon-plus"></span> New Submission</a>
+{% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

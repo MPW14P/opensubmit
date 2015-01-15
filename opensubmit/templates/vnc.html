@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load bootstrap %}
+{% load staticfiles %}
+{% load url from future %}
+
+{% block title %}
+    {{ block.super }} - VNC
+{% endblock %}
+
+{% block docready %}
+$('#id_authors').multiselect({enableFiltering: true, enableCaseInsensitiveFiltering: true});
+{% endblock %}
+
+{% block content %}
+<script type="text/javascript">
+function test_vnc() {
+    $.get("{% url 'vnc_vm' assignment.id %}", function(data) {
+        if (data) {
+            $('#vnc-frame iframe').attr('src', data);
+            $('#vnc-frame').toggle(true);
+            $('#spinner').toggle(false);
+        } else {
+            setTimeout(test_vnc, 1000);
+        }
+    });
+}
+$(test_vnc);
+</script>
+<div class="page-header">
+    <h1>
+        VNC
+        <br/>
+        <small>{{ assignment }} ({{ assignment.course }})</small>
+    </h1>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        <div id="vnc-frame" class="embed-responsive embed-responsive-16by9" style="display: none;">
+            <iframe class="embed-responsive-item"></iframe>
+        </div>
+        <div id="spinner">
+		<div style="background:url({% static "images/spinner.svg" %});background-size: 50px;width: 50px;height:50px;margin: 0 auto;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
