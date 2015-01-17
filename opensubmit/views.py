@@ -153,9 +153,14 @@ def submit_vm(request):
         raise PermissionDenied("Missing POST")
     
     vm = get_object_or_404(VMInstance, token=request.POST['token'])
+    user = vm.owner
+
+    # Check whether submissions are allowed.
+    if not vm.assignment.can_create_submission(user=user):
+        raise PermissionDenied("You are not allowed to create a submission for this assignment")
     
     submissionFile = SubmissionFile(attachment=request.FILES['submission'])
-    submission = Submission(submitter=vm.owner, assignment=vm.assignment)
+    submission = Submission(submitter=user, assignment=vm.assignment)
     
     submissionFile.save()
     submission.state = submission.get_initial_state()
