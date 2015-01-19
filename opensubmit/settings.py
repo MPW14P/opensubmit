@@ -3,7 +3,8 @@ from __future__ import print_function
 import sys
 import os
 from ConfigParser import SafeConfigParser
-from novaclient.v1_1 import client
+from novaclient.v1_1 import client as novaclient
+from neutronclient.neutron import client as neutronclient
 
 
 # The following section determines which configuration file to load.
@@ -208,7 +209,9 @@ NOVA_AUTH_URL = config.get("nova", "AUTH_URL")
 KEYSTONE_USER = config.get("nova", "KEYSTONE_USER")
 KEYSTONE_TENANT = config.get("nova", "KEYSTONE_TENANT")
 KEYSTONE_PASS = config.get("nova", "KEYSTONE_PASS")
-NOVA = client.Client(KEYSTONE_USER, KEYSTONE_PASS, KEYSTONE_TENANT, NOVA_AUTH_URL, service_type="compute")
+NOVA_REGION = config.get("nova", "NOVA_REGION", None)
+NOVA = novaclient.Client(KEYSTONE_USER, KEYSTONE_PASS, KEYSTONE_TENANT, NOVA_AUTH_URL, service_type="compute", region_name=NOVA_REGION)
+NEUTRON = neutronclient.Client('2.0', username=KEYSTONE_USER, password=KEYSTONE_PASS, tenant_name=KEYSTONE_TENANT, auth_url=NOVA_AUTH_URL, region_name=NOVA_REGION)
 
 GRAPPELLI_ADMIN_TITLE = "OpenSubmit"
 GRAPPELLI_SWITCH_USER = True

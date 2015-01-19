@@ -110,4 +110,4 @@ AUTH_URL: http://control:5000/v2.0
 KEYSTONE_USER: admin
 KEYSTONE_TENANT: admin
 KEYSTONE_PASS: password
-
+NOVA_REGION: regionOne

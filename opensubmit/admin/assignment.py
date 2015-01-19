@@ -1,5 +1,5 @@
 # Assignment admin interface
-from opensubmit.settings import NOVA
+from opensubmit.settings import NOVA, NEUTRON
 
 from django.contrib.admin import ModelAdmin
 from django.forms import ModelForm, MultipleChoiceField, ChoiceField, Select, CheckboxSelectMultiple
@@ -28,13 +28,13 @@ class AssignmentForm(ModelForm):
 		return [(None, '-')] + [(f.id, f.name) for f in NOVA.flavors.list()]
 	
 	def get_images(self):
-		return [(None, '-')] + [(f.id, f.name) for f in NOVA.images.list()]
+		return [(None, '-')] + sorted([(f.id, f.name) for f in NOVA.images.list()], key=lambda t: t[1])
 	
 	def get_networks(self):
-		return [(None, '-')] + [(f.id, f.label) for f in NOVA.networks.list()]
+		return [(None, '-')] + [(net['id'], net['name']) for net in NEUTRON.list_networks()['networks']]
 	
 	def get_security_groups(self):
-		return [(f.name, u"<{}> ({})".format(f.name, f.description)) for f in NOVA.security_groups.list()]
+		return [(g['id'], u"<{}> ({})".format(g['name'], g['description'])) for g in NEUTRON.list_security_groups()['security_groups']]
 
 
 class AssignmentAdmin(ModelAdmin):

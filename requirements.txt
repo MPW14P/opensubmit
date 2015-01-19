@@ -6,4 +6,5 @@ django-grappelli
 psutil
 twine
 python-novaclient
+python-neutronclient
 inflection
